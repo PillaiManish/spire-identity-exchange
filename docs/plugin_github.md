@@ -10,7 +10,8 @@ This plugin also validates **Forgejo Actions** OIDC tokens. Forgejo emits the sa
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `issuerURL` | string | no | OIDC issuer. Default: `https://token.actions.githubusercontent.com`. |
+| `issuerURL` | string | no | OIDC issuer. Default: `https://token.actions.githubusercontent.com`. Compared against the token's `iss` claim rather than fetched; but when `discoveryURL` is unset it doubles as the discovery URL and must then meet the same scheme requirement. |
+| `discoveryURL` | string | no | Base URL for OIDC discovery of the JWKS endpoint. Defaults to `issuerURL` when empty. This is the URL actually fetched, so it must be HTTPS (or HTTP to `localhost`). The `jwks_uri` the discovery document advertises must meet the same requirement, and a redirect from HTTPS to HTTP is refused. |
 | `audiences` | string array | **yes** | Expected JWT audience values. At least one entry required. |
 | `allowedRepositoryOwners` | string array | see note | GitHub organizations/users allowed. Supports trailing wildcard (`*`). At least one of `allowedRepositories` or `allowedRepositoryOwners` must be set. |
 | `allowedRepositories` | string array | see note | Repositories allowed in `owner/name` format. Supports trailing wildcard (`*`). At least one required if `allowedRepositoryOwners` is empty. |
@@ -58,7 +59,7 @@ The `workflow_ref` and `job_workflow_ref` values decompose only when the path co
 
 ## Validation flow
 
-1. **JWT signature verification** — fetches the issuer's JWKS (via OIDC discovery or explicit `jwksUri`), extracts the `kid` from the token header, and verifies the RSA/ECDSA signature.
+1. **JWT signature verification** — fetches the JWKS via OIDC discovery against `discoveryURL` (defaulting to `issuerURL`), extracts the `kid` from the token header, and verifies the RSA/ECDSA signature.
 2. **Standard claim validation** — verifies `iss`, `aud`, and `exp` (30s clock leeway).
 3. **Allowlist check** — enforces `allowedRepositoryOwners` and/or `allowedRepositories` using suffix-wildcard matching.
 4. **Replay detection** — the caller's replay cache (configurable `purposeMode`) prevents token reuse.
